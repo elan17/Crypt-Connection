@@ -3,7 +3,7 @@ from multiprocessing import Manager
 
 from Crypto.Random import get_random_bytes
 
-import Crypt_Client.Crypt_Client.Crypt as Crypt
+import Crypt_Client.Crypt as Crypt
 
 
 class InvalidToken(Exception):
@@ -24,6 +24,11 @@ class KeyExchangeFailed(Exception):
         super().__init__(*args)
 
 
+class UnableToDecrypt(Exception):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+
 class Client:
 
     def __init__(self, ip, port, claves=None, bits=1024, buffersize=1024*1024, token_size=32):
@@ -35,6 +40,7 @@ class Client:
         :param bits: If claves is None, size of the key to generate
         :param buffersize: Tunnel anchor for exchanging keys
         :param token_size: Authenthication token size to generate
+        :raise KeyExchangeFailed
         """
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if claves is None:
@@ -56,17 +62,27 @@ class Client:
 
     def recv(self, timeout=None, number_size=5):
         """
-        
+        Receives a message from the server
         :param timeout: Time to wait until timing out 
         :param number_size: Size in bytes of integer representing the size of the message
+        :raise DisconnectedServer
+        :raise UnableToDecrypt
+        :raise InvalidToken
         :return: Message received
         """
         self.s.settimeout(timeout)
         long = int.from_bytes(self.s.recv(number_size), "big")
-        msg = self.s.recv(long)
+        try:
+            msg = self.s.recv(long)
+        except socket.error:
+            raise DisconnectedServer("The server seems to be down")
         if msg == b"":
             raise DisconnectedServer("The server seems to be down")
-        msg = Crypt.decrypt(msg, self.claves["PRIVATE"])
+
+        try:
+            msg = Crypt.decrypt(msg, self.claves["PRIVATE"])
+        except:
+            raise UnableToDecrypt("Unable to decrypt the message sent by the server")
         if self.server_token in msg:
             msg = msg.replace(self.server_token, b"", 1)
         else:
@@ -79,13 +95,18 @@ class Client:
         Sends a message to the server
         :param msg: Message to send
         :param number_size: Size in bytes of integer representing the size of the message
+        :raise socket.
         :return: VOID
         """
         msg = self.client_token + msg.encode()
         msg = Crypt.encrypt(msg, self.publica)
         leng = len(msg).to_bytes(number_size, "big")
-        self.s.send(leng)
-        self.s.send(msg)
+
+        try:
+            self.s.send(leng)
+            self.s.send(msg)
+        except BrokenPipeError:
+            raise DisconnectedServer("The server has been disconnected")
 
     def __del__(self):
         self.s.close()
@@ -101,4 +122,6 @@ class Client:
 if __name__ == "__main__":
     client = Client("localhost", 8001)
     print(client.recv())
+    import time
+    time.sleep(5)
     client.send("CUCU")

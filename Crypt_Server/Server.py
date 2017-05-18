@@ -39,6 +39,7 @@ class Server:
         :param timeout: Time to wait for a connection
         :param tunnel_anchor: Bits anchor for the key exchange
         :param token_size: Authentication token size to generate
+        :raise KeyExchangeFailed
         :return: Connnection object or Timeout Exception if timeout met
         """
         self.s.settimeout(timeout)
@@ -70,6 +71,11 @@ class DisconnectedClient(Exception):
         super().__init__(*args)
 
 
+class UnableToDecrypt(Exception):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+
 class Connection:
 
     def __init__(self, conn, public, client_token, private, server_token):
@@ -97,6 +103,7 @@ class Connection:
         Sends the given data to the client
         :param msg: Message to send(String)
         :param number_size: Size in bytes of integer representing the size of the message
+        :raise DisconnectedClient
         :return: VOID
         """
         msg = self.server_token + msg.encode()
@@ -114,15 +121,26 @@ class Connection:
         Receives data from the client and check the token
         :param timeout: Time to wait until exiting
         :param number_size: Size in bytes of integer representing the size of the message
+        :raise UnableToDecrypt
+        :raise DisconnectedClient
+        :raise InvalidToken
         :return: Message received(String)
         """
         self.conn.settimeout(timeout)
         long = int.from_bytes(self.conn.recv(number_size), "big")
-        msg = self.conn.recv(long)
+        try:
+            msg = self.conn.recv(long)
+        except socket.error:
+            self.conn.close()
+            raise DisconnectedClient("The client has been disconnected. Connection closed")
         if msg == b"":
             self.conn.close()
             raise DisconnectedClient("The client has been disconnected. Connection closed")
-        msg = Crypt.decrypt(msg, self.private)
+        try:
+            msg = Crypt.decrypt(msg, self.private)
+        except:
+            self.conn.close()
+            raise UnableToDecrypt("Unable to decrypt the client message")
         if self.client_token in msg:
             msg = msg.replace(self.client_token, b"", 1)
         else:
