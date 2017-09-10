@@ -88,7 +88,7 @@ class Client:
         else:
             raise InvalidToken("The token provided by the server doesn't match the original one. Maybe an attempt"
                                "of man-in-the-middle?")
-        return msg.decode( )
+        return msg.decode()
 
     def send(self, msg, number_size=5):
         """
