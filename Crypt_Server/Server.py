@@ -146,7 +146,7 @@ class Connection:
         else:
             raise InvalidToken("The token provided by the client doesn't match the original one. Maybe an attempt"
                                "of man-in-the-middle?")
-        return msg
+        return msg.decode()
 
     def get_conn(self):
         """
