@@ -96,11 +96,7 @@ class Connection:
         self.blocked = manager.Value(bool, False)
 
     def close(self):
-        self.conn.shutdown(socket.SHUT_RDWR)
         self.conn.close()
-
-    def __del__(self):
-        self.close()
 
     def send(self, msg, number_size=5):
         """

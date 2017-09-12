@@ -111,9 +111,6 @@ class Client:
     def close(self):
         self.s.close()
 
-    def __del__(self):
-        self.close()
-
     def get_conn(self):
         """
         Returns the Socket's connection object(It should only be used for gathering information rather than
