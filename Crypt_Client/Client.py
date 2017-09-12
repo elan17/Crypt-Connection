@@ -109,6 +109,7 @@ class Client:
             raise DisconnectedServer("The server has been disconnected")
 
     def __del__(self):
+        self.s.shutdown(socket.SHUT_RDWR)
         self.s.close()
 
     def get_conn(self):
