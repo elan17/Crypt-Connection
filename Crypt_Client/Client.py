@@ -109,9 +109,7 @@ class Client:
             raise DisconnectedServer("The server has been disconnected")
 
     def close(self):
-        self.s.shutdown(socket.SHUT_RDWR)
         self.s.close()
-        del self
 
     def __del__(self):
         self.close()
@@ -127,6 +125,4 @@ class Client:
 if __name__ == "__main__":
     client = Client("localhost", 8001)
     print(client.recv())
-    import time
-    time.sleep(5)
     client.send("CUCU")

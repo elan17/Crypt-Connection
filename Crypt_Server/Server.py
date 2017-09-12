@@ -98,7 +98,6 @@ class Connection:
     def close(self):
         self.conn.shutdown(socket.SHUT_RDWR)
         self.conn.close()
-        del self
 
     def __del__(self):
         self.close()
@@ -166,4 +165,6 @@ if __name__ == "__main__":
     server = Server("localhost", 8001)
     con = server.accept()
     con.send("HOLA")
-    print(con.recv())
+    # print(con.recv())
+    del con
+    while True: pass
