@@ -108,9 +108,13 @@ class Client:
         except BrokenPipeError:
             raise DisconnectedServer("The server has been disconnected")
 
-    def __del__(self):
+    def close(self):
         self.s.shutdown(socket.SHUT_RDWR)
         self.s.close()
+        del self
+
+    def __del__(self):
+        self.close()
 
     def get_conn(self):
         """
