@@ -96,6 +96,10 @@ class Connection:
         self.blocked = manager.Value(bool, False)
 
     def close(self):
+        try:
+            self.conn.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
         self.conn.close()
 
     def send(self, msg, number_size=5):
@@ -113,7 +117,7 @@ class Connection:
             self.conn.send(leng)
             self.conn.send(msg)
         except socket.error:
-            self.conn.close()
+            self.close()
             raise DisconnectedClient("The client has been disconnected. Connection closed")
 
     def recv(self, timeout=None, number_size=5):
@@ -131,15 +135,15 @@ class Connection:
         try:
             msg = self.conn.recv(long)
         except socket.error:
-            self.conn.close()
+            self.close()
             raise DisconnectedClient("The client has been disconnected. Connection closed")
         if msg == b"":
-            self.conn.close()
+            self.close()
             raise DisconnectedClient("The client has been disconnected. Connection closed")
         try:
             msg = Crypt.decrypt(msg, self.private)
         except:
-            self.conn.close()
+            self.close()
             raise UnableToDecrypt("Unable to decrypt the client message")
         if self.client_token in msg:
             msg = msg.replace(self.client_token, b"", 1)
@@ -162,5 +166,5 @@ if __name__ == "__main__":
     con = server.accept()
     con.send("HOLA")
     # print(con.recv())
-    del con
+    con.close()
     while True: pass

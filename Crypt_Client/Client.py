@@ -109,6 +109,10 @@ class Client:
             raise DisconnectedServer("The server has been disconnected")
 
     def close(self):
+        try:
+            self.s.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
         self.s.close()
 
     def get_conn(self):
@@ -121,5 +125,7 @@ class Client:
 
 if __name__ == "__main__":
     client = Client("localhost", 8001)
+    client.close()
     print(client.recv())
     client.send("CUCU")
+    client.recv()
