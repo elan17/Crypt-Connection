@@ -40,6 +40,7 @@ class Server:
     def key_exchange(self, conn, timeout=None, tunnel_anchor=1024 * 1024, token_size=32):
         """
         Accept a connection(this should be iterated to avoid unhandled connections)
+        :param conn: Connection to handle
         :param timeout: Time to wait for a connection
         :param tunnel_anchor: Bits anchor for the key exchange
         :param token_size: Authentication token size to generate

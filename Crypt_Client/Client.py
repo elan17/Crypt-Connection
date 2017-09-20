@@ -31,7 +31,7 @@ class UnableToDecrypt(Exception):
 
 class Client:
 
-    def __init__(self, ip, port, claves=None, bits=1024, buffersize=1024*1024, token_size=32):
+    def __init__(self, ip, port, timeout, claves=None, bits=1024, buffersize=1024*1024, token_size=32):
         """
         Crypt_Client object to handle connections
         :param ip: Ip address to connect to
@@ -43,6 +43,7 @@ class Client:
         :raise KeyExchangeFailed
         """
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.s.settimeout(timeout)
         if claves is None:
             self.claves = Crypt.generate(bits)
         else:
@@ -123,8 +124,9 @@ class Client:
         """
         return self.s
 
+
 if __name__ == "__main__":
-    client = Client("localhost", 8001)
+    client = Client("localhost", 8001, timeout=10)
     client.close()
     print(client.recv())
     client.send("CUCU")
