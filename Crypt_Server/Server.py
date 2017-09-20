@@ -33,7 +33,11 @@ class Server:
         self.s.bind((ip, port))
         self.s.listen(unhandled_connections)
 
-    def accept(self, timeout=None, tunnel_anchor=1024 * 1024, token_size=32):
+    def accept(self):
+        conn, addr = self.s.accept()
+        return conn
+
+    def key_exchange(self, conn, timeout=None, tunnel_anchor=1024 * 1024, token_size=32):
         """
         Accept a connection(this should be iterated to avoid unhandled connections)
         :param timeout: Time to wait for a connection
@@ -42,8 +46,7 @@ class Server:
         :raise KeyExchangeFailed
         :return: Connnection object or Timeout Exception if timeout met
         """
-        self.s.settimeout(timeout)
-        conn, addr = self.s.accept()
+        conn.settimeout(timeout)
         try:
             conn.send(self.claves["PUBLIC"])
             public = Crypt.decrypt(conn.recv(tunnel_anchor), self.claves["PRIVATE"]).decode()
