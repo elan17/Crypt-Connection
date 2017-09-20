@@ -33,7 +33,8 @@ class Server:
         self.s.bind((ip, port))
         self.s.listen(unhandled_connections)
 
-    def accept(self):
+    def accept(self, timeout=None):
+        self.s.settimeout(timeout)
         conn, addr = self.s.accept()
         return conn
 
