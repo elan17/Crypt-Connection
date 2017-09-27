@@ -145,7 +145,6 @@ class Connection:
         """
         if time() - self.last_query < self.query_cooldown:
             raise TooManyQueries  # We simulate that there is nothing to read
-        self.last_query = time()
         self.conn.settimeout(timeout)
         long = int.from_bytes(self.conn.recv(number_size), "big")
         try:
@@ -166,6 +165,7 @@ class Connection:
         else:
             raise InvalidToken("The token provided by the client doesn't match the original one. Maybe an attempt"
                                "of man-in-the-middle?")
+        self.last_query = time()
         return msg.decode()
 
     def get_conn(self):
