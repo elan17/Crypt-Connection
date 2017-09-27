@@ -1,5 +1,5 @@
 import socket
-from multiprocessing import Manager
+from time import time
 
 import Crypt_Server.Crypt as Crypt
 from Crypto.Random import get_random_bytes
@@ -81,6 +81,11 @@ class UnableToDecrypt(Exception):
         super().__init__(*args)
 
 
+class TooManyQueries(Exception):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+
 class Connection:
 
     def __init__(self, conn, public, client_token, private, server_token):
@@ -97,8 +102,8 @@ class Connection:
         self.client_token = client_token
         self.private = private
         self.server_token = server_token
-        manager = Manager()
-        self.blocked = manager.Value(bool, False)
+        self.last_query = time()
+        self.query_cooldown = 0
 
     def close(self):
         try:
@@ -106,6 +111,9 @@ class Connection:
         except OSError:
             pass
         self.conn.close()
+
+    def set_query_cooldown(self, cooldown):
+        self.query_cooldown = cooldown
 
     def send(self, msg, number_size=5):
         """
@@ -135,6 +143,9 @@ class Connection:
         :raise InvalidToken
         :return: Message received(String)
         """
+        if time() - self.last_query < self.query_cooldown:
+            raise TooManyQueries  # We simulate that there is nothing to read
+        self.last_query = time()
         self.conn.settimeout(timeout)
         long = int.from_bytes(self.conn.recv(number_size), "big")
         try:
@@ -147,7 +158,7 @@ class Connection:
             raise DisconnectedClient("The client has been disconnected. Connection closed")
         try:
             msg = Crypt.decrypt(msg, self.private)
-        except:
+        except Exception:
             self.close()
             raise UnableToDecrypt("Unable to decrypt the client message")
         if self.client_token in msg:
@@ -166,10 +177,13 @@ class Connection:
         """
         return self.conn
 
+
 if __name__ == "__main__":
     server = Server("localhost", 8001)
     con = server.accept()
+    con = server.key_exchange(con)
+    con.set_query_cooldown(10)
     con.send("HOLA")
-    # print(con.recv())
-    con.close()
+    con.recv()
+    con.recv()
     while True: pass

@@ -127,7 +127,7 @@ class Client:
 
 if __name__ == "__main__":
     client = Client("localhost", 8001, timeout=10)
-    client.close()
     print(client.recv())
     client.send("CUCU")
-    client.recv()
+    client.send("CUCU")
+    client.close()
