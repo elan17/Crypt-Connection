@@ -102,7 +102,7 @@ class Connection:
         self.client_token = client_token
         self.private = private
         self.server_token = server_token
-        self.last_query = time()
+        self.last_query = 0
         self.query_cooldown = 0
 
     def close(self):
