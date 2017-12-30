@@ -74,10 +74,7 @@ class Client:
         """
         self.s.settimeout(timeout)
         long = int.from_bytes(self.s.recv(number_size), "big")
-        try:
-            msg = self.s.recv(long)
-        except socket.error:
-            raise DisconnectedServer("The server seems to be down")
+        msg = self.s.recv(long)
         if msg == b"":
             raise DisconnectedServer("The server seems to be down")
 

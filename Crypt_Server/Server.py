@@ -60,7 +60,7 @@ class Server:
         except:
             conn.close()
             raise KeyExchangeFailed("The key exchange failed. Connection closed")
-        connection = Connection(conn, public, token, self.claves["PRIVATE"], server_token, aes_key)
+        connection = Connection(conn, token, server_token, aes_key)
         return connection
 
     def __del__(self):
@@ -90,19 +90,15 @@ class TooManyQueries(Exception):
 
 class Connection:
 
-    def __init__(self, conn, public, client_token, private, server_token, aes_key):
+    def __init__(self, conn, client_token, server_token, aes_key):
         """
         Connection object handling cryptography and authentication methods
         :param conn: Socket connection object
-        :param public: Public key of the client
         :param client_token: Authentication token of the client
-        :param private: Private key of the server
         :param server_token: Authentication token of the server
         """
         self.conn = conn
-        self.public = public
         self.client_token = client_token
-        self.private = private
         self.server_token = server_token
         self.aes_key = aes_key
         self.last_query = 0
@@ -150,11 +146,7 @@ class Connection:
             raise TooManyQueries  # We simulate that there is nothing to read
         self.conn.settimeout(timeout)
         long = int.from_bytes(self.conn.recv(number_size), "big")
-        try:
-            msg = self.conn.recv(long)
-        except socket.error:
-            self.close()
-            raise DisconnectedClient("The client has been disconnected. Connection closed")
+        msg = self.conn.recv(long)
         if msg == b"":
             self.close()
             raise DisconnectedClient("The client has been disconnected. Connection closed")
@@ -189,4 +181,4 @@ if __name__ == "__main__":
     con.send("HOLA")
     print(con.recv())
     print(con.recv())
-    while True: pass
+    #while True: pass
