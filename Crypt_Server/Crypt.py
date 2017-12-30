@@ -1,5 +1,6 @@
 from Crypto.PublicKey import RSA
-from Crypto.Cipher import PKCS1_OAEP
+from Crypto.Cipher import PKCS1_OAEP, AES
+from Crypto.Random import get_random_bytes
 
 
 class InvalidKeySize(Exception):
@@ -8,7 +9,7 @@ class InvalidKeySize(Exception):
         super().__init__(args)
 
 
-def generate_block_size(public, passphrase=None):
+def generate_block_size_rsa(public, passphrase=None):
     """
     Gets the size of each decryption block and maximum size for encryption blocks
     :param public: Public key to use for the checks
@@ -19,7 +20,7 @@ def generate_block_size(public, passphrase=None):
     return int((key.size_in_bits() - 384)/8 + 6)
 
 
-def generate(bits, passphrase_public=None, passphrase_private=None):
+def generate_rsa(bits, passphrase_public=None, passphrase_private=None):
     """
     Generate a pair of RSA keys
     :param bits: Bits of the key
@@ -36,7 +37,7 @@ def generate(bits, passphrase_public=None, passphrase_private=None):
     return returneo
 
 
-def encrypt_block(msg, key):
+def encrypt_block_rsa(msg, key):
     """
     Encrypt plain-text block
     :param msg: Block to encrypt
@@ -48,7 +49,7 @@ def encrypt_block(msg, key):
     return msg
 
 
-def encrypt(msg, public, max_block=None, passphrase=None):
+def encrypt_rsa(msg, public, max_block=None, passphrase=None):
     """
     Encrypts a given message
     :param msg: Message to encrypt(bytes or string)
@@ -58,18 +59,18 @@ def encrypt(msg, public, max_block=None, passphrase=None):
     :return: Bytes object representing the encrypted message
     """
     if max_block is None:
-        max_block = generate_block_size(public, passphrase)
+        max_block = generate_block_size_rsa(public, passphrase)
     if type(msg) == str:
         msg = msg.encode()
     key = RSA.import_key(public, passphrase)
     returneo = b""
     for x in range(0, len(msg), max_block):
         block = msg[x:x + max_block]
-        returneo += encrypt_block(block, key)
+        returneo += encrypt_block_rsa(block, key)
     return returneo
 
 
-def decrypt_block(msg, key):
+def decrypt_block_rsa(msg, key):
     """
     Decrypt message
     :param msg: Bits object to decrypt
@@ -81,7 +82,7 @@ def decrypt_block(msg, key):
     return msg
 
 
-def decrypt(msg, private, passphrase=None):
+def decrypt_rsa(msg, private, passphrase=None):
     """
     Decrypt the given message
     :param msg: Bytes object to decrypt
@@ -94,5 +95,28 @@ def decrypt(msg, private, passphrase=None):
     max_block = key.size_in_bytes()
     for x in range(0, len(msg), max_block):
         block = msg[x:x+max_block]
-        returneo += decrypt_block(block, key)
+        returneo += decrypt_block_rsa(block, key)
+    return returneo
+
+
+def generate_aes(key_size: int):
+    if key_size not in (16, 24, 32):
+        raise InvalidKeySize
+    return get_random_bytes(key_size)
+
+
+def encrypt_aes(txt, key):
+    cipher = AES.new(key, AES.MODE_EAX)
+    nonce = cipher.nonce
+    ciphertext, tag = cipher.encrypt_and_digest(txt)
+    return nonce + tag + ciphertext
+
+
+def decrypt_aes(msg, key):
+    nonce = msg[:16]
+    tag = msg[16:32]
+    cipher = msg[32:]
+    key = AES.new(key, AES.MODE_EAX, nonce=nonce)
+    returneo = key.decrypt(cipher)
+    key.verify(tag)
     return returneo

@@ -45,16 +45,17 @@ class Client:
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.settimeout(timeout)
         if claves is None:
-            self.claves = Crypt.generate(bits)
+            self.claves = Crypt.generate_rsa(bits)
         else:
             self.claves = claves
         self.s.connect((ip, port))
         try:
             self.publica = self.s.recv(buffersize).decode()
-            self.s.send(Crypt.encrypt(self.claves["PUBLIC"], self.publica))
-            self.server_token = Crypt.decrypt(self.s.recv(buffersize), self.claves["PRIVATE"])
+            self.s.send(Crypt.encrypt_rsa(self.claves["PUBLIC"], self.publica))
+            self.server_token = Crypt.decrypt_rsa(self.s.recv(buffersize), self.claves["PRIVATE"])
             self.client_token = get_random_bytes(token_size)
-            self.s.send(Crypt.encrypt(self.client_token, self.publica))
+            self.s.send(Crypt.encrypt_rsa(self.client_token, self.publica))
+            self.aes_key = Crypt.decrypt_rsa(self.s.recv(buffersize), self.claves["PRIVATE"])
         except:
             self.s.close()
             raise KeyExchangeFailed("Key exchange failed. Connection closed")
@@ -81,7 +82,7 @@ class Client:
             raise DisconnectedServer("The server seems to be down")
 
         try:
-            msg = Crypt.decrypt(msg, self.claves["PRIVATE"])
+            msg = Crypt.decrypt_aes(msg, self.aes_key)
         except:
             raise UnableToDecrypt("Unable to decrypt the message sent by the server")
         if self.server_token in msg:
@@ -100,7 +101,7 @@ class Client:
         :return: VOID
         """
         msg = self.client_token + msg.encode()
-        msg = Crypt.encrypt(msg, self.publica)
+        msg = Crypt.encrypt_aes(msg, self.aes_key)
         leng = len(msg).to_bytes(number_size, "big")
 
         try:

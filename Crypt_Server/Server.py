@@ -25,7 +25,7 @@ class Server:
         :param unhandled_connections: Number of non-accepted connections before starting refusing them
         """
         if claves is None:
-            self.claves = Crypt.generate(bits)
+            self.claves = Crypt.generate_rsa(bits)
         else:
             self.claves = claves
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -50,15 +50,17 @@ class Server:
         """
         conn.settimeout(timeout)
         try:
+            aes_key = Crypt.generate_aes(32)
             conn.send(self.claves["PUBLIC"])
-            public = Crypt.decrypt(conn.recv(tunnel_anchor), self.claves["PRIVATE"]).decode()
+            public = Crypt.decrypt_rsa(conn.recv(tunnel_anchor), self.claves["PRIVATE"]).decode()
             server_token = get_random_bytes(token_size)
-            conn.send(Crypt.encrypt(server_token, public))
-            token = Crypt.decrypt(conn.recv(tunnel_anchor), self.claves["PRIVATE"])
+            conn.send(Crypt.encrypt_rsa(server_token, public))
+            token = Crypt.decrypt_rsa(conn.recv(tunnel_anchor), self.claves["PRIVATE"])
+            conn.send(Crypt.encrypt_rsa(aes_key, public))
         except:
             conn.close()
             raise KeyExchangeFailed("The key exchange failed. Connection closed")
-        connection = Connection(conn, public, token, self.claves["PRIVATE"], server_token)
+        connection = Connection(conn, public, token, self.claves["PRIVATE"], server_token, aes_key)
         return connection
 
     def __del__(self):
@@ -88,7 +90,7 @@ class TooManyQueries(Exception):
 
 class Connection:
 
-    def __init__(self, conn, public, client_token, private, server_token):
+    def __init__(self, conn, public, client_token, private, server_token, aes_key):
         """
         Connection object handling cryptography and authentication methods
         :param conn: Socket connection object
@@ -102,6 +104,7 @@ class Connection:
         self.client_token = client_token
         self.private = private
         self.server_token = server_token
+        self.aes_key = aes_key
         self.last_query = 0
         self.query_cooldown = 0
 
@@ -124,7 +127,7 @@ class Connection:
         :return: VOID
         """
         msg = self.server_token + msg.encode()
-        msg = Crypt.encrypt(msg, self.public)
+        msg = Crypt.encrypt_aes(msg, self.aes_key)
         leng = len(msg).to_bytes(number_size, "big")
         try:
             self.conn.send(leng)
@@ -156,7 +159,7 @@ class Connection:
             self.close()
             raise DisconnectedClient("The client has been disconnected. Connection closed")
         try:
-            msg = Crypt.decrypt(msg, self.private)
+            msg = Crypt.decrypt_aes(msg, self.aes_key)
         except Exception:
             self.close()
             raise UnableToDecrypt("Unable to decrypt the client message")
@@ -182,8 +185,8 @@ if __name__ == "__main__":
     server = Server("localhost", 8001)
     con = server.accept()
     con = server.key_exchange(con)
-    con.set_query_cooldown(10)
+    #con.set_query_cooldown(10)
     con.send("HOLA")
-    con.recv()
-    con.recv()
+    print(con.recv())
+    print(con.recv())
     while True: pass
