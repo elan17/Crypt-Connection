@@ -94,7 +94,7 @@ class Client:
         Sends a message to the server
         :param msg: Message to send
         :param number_size: Size in bytes of integer representing the size of the message
-        :raise socket.
+        :raise DisconnectedServer
         :return: VOID
         """
         msg = self.client_token + msg.encode()
@@ -102,8 +102,7 @@ class Client:
         leng = len(msg).to_bytes(number_size, "big")
 
         try:
-            self.s.send(leng)
-            self.s.send(msg)
+            self.s.send(leng+msg)
         except BrokenPipeError:
             raise DisconnectedServer("The server has been disconnected")
 
@@ -125,7 +124,6 @@ class Client:
 
 if __name__ == "__main__":
     client = Client("localhost", 8001, timeout=10)
-    print(client.recv())
-    client.send("CUCU")
-    client.send("CUCU")
-    client.close()
+    while True:
+        print(client.recv())
+        client.send("CUCU")

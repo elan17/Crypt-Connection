@@ -1,5 +1,5 @@
 import socket
-from time import time
+from time import time, sleep
 
 import Crypt_Server.Crypt as Crypt
 from Crypto.Random import get_random_bytes
@@ -126,8 +126,7 @@ class Connection:
         msg = Crypt.encrypt_aes(msg, self.aes_key)
         leng = len(msg).to_bytes(number_size, "big")
         try:
-            self.conn.send(leng)
-            self.conn.send(msg)
+            self.conn.send(leng+msg)
         except socket.error:
             self.close()
             raise DisconnectedClient("The client has been disconnected. Connection closed")
@@ -153,9 +152,8 @@ class Connection:
         try:
             msg = Crypt.decrypt_aes(msg, self.aes_key)
         except Exception:
-            self.close()
             raise UnableToDecrypt("Unable to decrypt the client message")
-        if self.client_token in msg:
+        if self.client_token == msg[:len(self.client_token)]:
             msg = msg.replace(self.client_token, b"", 1)
         else:
             raise InvalidToken("The token provided by the client doesn't match the original one. Maybe an attempt"
@@ -178,7 +176,10 @@ if __name__ == "__main__":
     con = server.accept()
     con = server.key_exchange(con)
     #con.set_query_cooldown(10)
-    con.send("HOLA")
-    print(con.recv())
-    print(con.recv())
+    while True:
+        tiempo = time()
+        con.send("HOLA")
+        con.recv()
+        print(time() - tiempo)
+        sleep(0.5)
     #while True: pass

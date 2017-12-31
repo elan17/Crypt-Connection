@@ -99,6 +99,7 @@ def decrypt_rsa(msg, private, passphrase=None):
         returneo += decrypt_block_rsa(block, key)
     return returneo
 
+
 def generate_aes(key_size: int):
     if key_size not in (16, 24, 32):
         raise InvalidKeySize
